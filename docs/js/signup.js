@@ -1,11 +1,13 @@
 import { initSupabase } from './supabase-client.js';
 import { signUp } from './api.js';
 import { MSG } from './msg.js';
+import { bindSocialButtons } from './social-auth.js';
 import { $, getFormValues, showToast } from './ui.js';
 
 // 회원가입 페이지를 시작한다
 function initSignupPage() {
   initSupabase();
+  bindSocialButtons();
   $('#signupForm').addEventListener('submit', handleSignupSubmit);
 }
 

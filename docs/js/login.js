@@ -1,17 +1,23 @@
 import { initSupabase } from './supabase-client.js';
 import { signIn } from './api.js';
-import { handleAuthRedirect, hasAuthRedirectHash } from './auth-redirect.js';
+import {
+  handleAuthRedirect,
+  hasAuthRedirectHash,
+  hasAuthRedirectQuery,
+} from './auth-redirect.js';
 import { MSG } from './msg.js';
+import { bindSocialButtons } from './social-auth.js';
 import { $, getFormValues, showToast } from './ui.js';
 
 // 로그인 페이지를 시작한다
 async function initLoginPage() {
   initSupabase();
-  if (hasAuthRedirectHash()) {
+  if (hasAuthRedirectHash() || hasAuthRedirectQuery()) {
     await handleAuthRedirect();
     return;
   }
   showVerifiedMessage();
+  bindSocialButtons();
   $('#loginForm').addEventListener('submit', handleLoginSubmit);
 }
 

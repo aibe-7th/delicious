@@ -10,6 +10,11 @@ export async function getSession() {
     throw error;
   }
 
+  // 로그인 유저 프로필을 보장한다
+  if (data.session?.user) {
+    await upsertProfile(supabase, data.session.user);
+  }
+
   return data.session;
 }
 
@@ -33,13 +38,23 @@ export async function signUp(email, password, emailRedirectTo) {
 
   // 유저가 있으면 프로필을 저장한다
   if (user) {
-    await supabase.from('profiles').upsert({
-      id: user.id,
-      email: user.email,
-    });
+    await upsertProfile(supabase, user);
   }
 
   return data;
+}
+
+// 유저 프로필을 저장한다
+async function upsertProfile(supabase, user) {
+  const { error } = await supabase.from('profiles').upsert({
+    id: user.id,
+    email: user.email ?? user.id,
+  });
+
+  // 프로필 저장 오류를 전달한다
+  if (error) {
+    throw error;
+  }
 }
 
 // 이메일 로그인을 진행한다
@@ -51,6 +66,24 @@ export async function signIn(email, password) {
   });
 
   // 로그인 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+// 소셜 로그인을 진행한다
+export async function signInWithProvider(provider, redirectTo) {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+    },
+  });
+
+  // 소셜 로그인 오류를 전달한다
   if (error) {
     throw error;
   }

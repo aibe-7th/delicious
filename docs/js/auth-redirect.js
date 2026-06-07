@@ -7,19 +7,35 @@ export function hasAuthRedirectHash() {
   return Boolean(params.get('access_token') && params.get('type'));
 }
 
-// 이메일 인증 콜백을 로그인 화면으로 보낸다
+// 인증 콜백 쿼리 여부를 확인한다
+export function hasAuthRedirectQuery() {
+  const params = new URLSearchParams(window.location.search);
+
+  return Boolean(params.get('code'));
+}
+
+// 이메일 인증 콜백 여부를 확인한다
+function isEmailSignupRedirect() {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+
+  return params.get('type') === 'signup';
+}
+
+// 인증 콜백을 완료 화면으로 보낸다
 export async function handleAuthRedirect() {
   const supabase = getSupabase();
 
   // 인증 콜백이 아니면 종료한다
-  if (!supabase || !hasAuthRedirectHash()) {
+  if (!supabase || (!hasAuthRedirectHash() && !hasAuthRedirectQuery())) {
     return false;
   }
 
-  // Supabase가 해시 세션을 저장하도록 기다린다
+  // Supabase가 콜백 세션을 저장하도록 기다린다
   await supabase.auth.getSession();
 
   window.history.replaceState({}, '', window.location.pathname);
-  window.location.replace('./login.html?verified=1');
+  window.location.replace(
+    isEmailSignupRedirect() ? './login.html?verified=1' : './index.html',
+  );
   return true;
 }
