@@ -181,6 +181,7 @@ h3,
 .review-card h3 {
   font-size: 1.25rem;
   font-weight: 800;
+  margin-bottom: 0.35rem;
 }
 
 .review-card > .d-flex {
@@ -193,6 +194,13 @@ h3,
 
 .review-content {
   white-space: pre-wrap;
+}
+
+.review-author {
+  color: var(--accent-dark);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
 }
 
 .comment-list {

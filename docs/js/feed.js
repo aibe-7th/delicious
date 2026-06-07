@@ -28,7 +28,9 @@ async function initFeedPage() {
 // 목록 이벤트를 연결한다
 function bindFeedEvents() {
   $('#refreshButton').addEventListener('click', loadReviews);
-  $('#logoutButton').addEventListener('click', handleLogoutClick);
+  document.querySelectorAll('[data-logout-button]').forEach((button) => {
+    button.addEventListener('click', handleLogoutClick);
+  });
   $('#reviewsList').addEventListener('click', handleReviewClick);
   $('#reviewsList').addEventListener('submit', handleCommentSubmit);
 }
@@ -127,14 +129,21 @@ async function refreshSession() {
 // 세션 상태를 표시한다
 function renderSession() {
   const sessionText = $('#sessionText');
-  const logoutButton = $('#logoutButton');
+  const authLinks = document.querySelectorAll('[data-auth-link]');
+  const logoutButtons = document.querySelectorAll('[data-logout-button]');
   const writeLinks = document.querySelectorAll('[data-write-link]');
 
   // 로그인 상태를 표시한다
   if (currentSession) {
     sessionText.textContent = currentSession.user.email;
     sessionText.classList.remove('d-none');
-    logoutButton.disabled = false;
+    authLinks.forEach((link) => {
+      link.classList.add('d-none');
+    });
+    logoutButtons.forEach((button) => {
+      button.classList.remove('d-none');
+      button.disabled = false;
+    });
     writeLinks.forEach((link) => {
       link.href = './write.html';
     });
@@ -143,7 +152,13 @@ function renderSession() {
 
   sessionText.textContent = '';
   sessionText.classList.add('d-none');
-  logoutButton.disabled = true;
+  authLinks.forEach((link) => {
+    link.classList.remove('d-none');
+  });
+  logoutButtons.forEach((button) => {
+    button.classList.add('d-none');
+    button.disabled = true;
+  });
   writeLinks.forEach((link) => {
     link.href = './login.html';
   });
@@ -187,12 +202,15 @@ function renderReviews() {
 function renderReviewCard(review) {
   const comments = review.comments ?? [];
   const isOwner = currentSession?.user.id === review.user_id;
+  const authorName =
+    review.profiles?.nickname || review.profiles?.email || '알 수 없는 사용자';
 
   return `
     <article class="review-card">
       <div class="d-flex justify-content-between gap-3">
         <div>
           <h3>${escapeHtml(review.title)}</h3>
+          <div class="review-author">${escapeHtml(authorName)}</div>
           <div class="metadata">
             ${escapeHtml(review.restaurant_name)} · ${review.latitude}, ${review.longitude}
           </div>

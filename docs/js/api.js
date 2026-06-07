@@ -85,6 +85,10 @@ export async function fetchReviews() {
       longitude,
       created_at,
       updated_at,
+      profiles!reviews_user_profile_fkey (
+        email,
+        nickname
+      ),
       comments (
         id,
         user_id,
@@ -123,7 +127,11 @@ export async function fetchReview(id) {
       latitude,
       longitude,
       created_at,
-      updated_at
+      updated_at,
+      profiles!reviews_user_profile_fkey (
+        email,
+        nickname
+      )
     `,
     )
     .eq('id', id)

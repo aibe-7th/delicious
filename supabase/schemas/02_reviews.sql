@@ -1,6 +1,8 @@
 create table if not exists public.reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  constraint reviews_user_profile_fkey
+    foreign key (user_id) references public.profiles(id) on delete cascade,
   title text not null,
   content text not null,
   restaurant_name text not null,

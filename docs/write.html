@@ -16,14 +16,13 @@
         <a class="navbar-brand fw-bold" href="./index.html">Delicious</a>
         <div class="nav-actions">
           <a class="nav-link" href="./index.html">목록</a>
-          <a class="nav-link" href="./login.html">로그인</a>
+          <span class="status-pill d-none" id="sessionText"></span>
         </div>
       </div>
     </nav>
 
     <main class="auth-layout">
       <section class="write-panel">
-        <span class="status-pill mb-3 d-none" id="sessionText"></span>
         <h1 id="formTitle">리뷰 작성</h1>
         <form id="reviewForm">
           <input type="hidden" id="reviewId" name="reviewId" />
