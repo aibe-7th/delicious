@@ -2,6 +2,8 @@ create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   review_id uuid not null references public.reviews(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
+  constraint comments_user_profile_fkey
+    foreign key (user_id) references public.profiles(id) on delete cascade,
   content text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
