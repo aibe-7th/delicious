@@ -212,6 +212,18 @@ h3,
   flex: 0 0 auto;
 }
 
+.comment-login {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.75rem;
+}
+
 .comment-author {
   color: var(--accent-dark);
   font-size: 0.875rem;
@@ -351,6 +363,12 @@ h3,
 
   .review-card .btn-group .btn {
     flex: 1 1 0;
+  }
+
+  .comment-login,
+  .comment-form {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .form-actions {

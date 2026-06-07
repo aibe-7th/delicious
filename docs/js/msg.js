@@ -6,9 +6,10 @@ export const MSG = {
   },
   auth: {
     emailVerified: '이메일 인증이 완료되었습니다. 로그인해 주세요.',
+    loginAction: '로그인하기',
+    loginRequiredCommentCta: '로그인 후 댓글을 남길 수 있습니다.',
     loginRequiredForComment: '로그인 후 댓글을 작성할 수 있습니다.',
     loginRequiredForReview: '로그인 후 작성할 수 있습니다.',
-    loginAction: '로그인하기',
     logoutSuccess: '로그아웃했습니다.',
     verifyDescription:
       '가입한 이메일 주소로 인증 메일을 보냈습니다. 메일함에서 인증을 완료한 뒤 로그인해 주세요.',

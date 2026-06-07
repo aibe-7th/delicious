@@ -219,18 +219,37 @@ function renderReviewCard(review) {
         <div class="comment-list vstack gap-2 mb-3">
           ${comments.map(renderComment).join('') || `<div class="metadata">${MSG.comment.empty}</div>`}
         </div>
-        <form class="comment-form d-flex gap-2">
-          <input type="hidden" name="reviewId" value="${review.id}" />
-          <input
-            class="form-control form-control-sm"
-            name="content"
-            placeholder="${MSG.comment.placeholder}"
-            required
-          />
-          <button class="btn btn-outline-success btn-sm">${MSG.action.register}</button>
-        </form>
+        ${renderCommentControl(review.id)}
       </div>
     </article>
+  `;
+}
+
+// 댓글 입력 영역을 렌더링한다
+function renderCommentControl(reviewId) {
+  // 로그인 전이면 로그인 안내를 표시한다
+  if (!currentSession) {
+    return `
+      <div class="comment-login">
+        <span>${MSG.auth.loginRequiredCommentCta}</span>
+        <a class="btn btn-outline-success btn-sm" href="./login.html">
+          ${MSG.auth.loginAction}
+        </a>
+      </div>
+    `;
+  }
+
+  return `
+    <form class="comment-form d-flex gap-2">
+      <input type="hidden" name="reviewId" value="${reviewId}" />
+      <input
+        class="form-control form-control-sm"
+        name="content"
+        placeholder="${MSG.comment.placeholder}"
+        required
+      />
+      <button class="btn btn-outline-success btn-sm">${MSG.action.register}</button>
+    </form>
   `;
 }
 
