@@ -96,6 +96,9 @@
 - 네이버 `zoom`과 카카오 `level`은 반대 스케일이라 확대 정도를 맞춰 둠 (`zoom 16` ≈ `level 5`)
 - 작성 진입 시 현재 위치를 감지해 기본 지도를 표시(표시용, 좌표 미지정)하고, `현재 위치` 버튼은 좌표를 채워 선택으로 인정 (검색 강제의 허용 예외 경로)
 - geolocation 권한: `denied`는 스크립트로 재요청 불가 → Permissions API로 상태를 확인해 차단 안내, `prompt`/닫기 상태는 버튼 클릭 시 재요청됨; 로드 시 실패도 상태 문구로 명시
+- 기본 provider는 네이버 우선, 미설정 시 카카오로 결정 (`getDefaultProvider`/`getDefaultMapProvider`)
+- 지도 렌더·정보창 역지오코딩은 선택 provider에 맞춰 분기 (`renderMap`/`reverseGeocode(lat, lng, provider)`)
+- 목록 카드 지도 확대는 `review-map-expanded` 클래스를 토글한 뒤 해당 카드만 다시 렌더
 
 ## DB 함수·트리거
 
