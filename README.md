@@ -1,6 +1,6 @@
 # 🍴 Delicious
 
-![version](https://img.shields.io/badge/version-1.0.0-success)
+![version](https://img.shields.io/badge/version-1.0.1-success)
 ![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla%20ESM-f7df1e?logo=javascript&logoColor=000)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952b3?logo=bootstrap&logoColor=fff)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20%7C%20Postgres-3ecf8e?logo=supabase&logoColor=fff)
