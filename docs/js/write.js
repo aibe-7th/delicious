@@ -203,6 +203,13 @@ async function handleReviewSubmit(event) {
   }
 
   const values = getFormValues(event.currentTarget);
+
+  // 좌표는 장소 검색으로만 채우므로 선택 여부를 확인한다
+  if (!values.latitude || !values.longitude) {
+    showToast(MSG.place.locationRequired, 'warning');
+    return;
+  }
+
   const payload = {
     id: values.reviewId || undefined,
     user_id: currentSession.user.id,

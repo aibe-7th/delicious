@@ -524,3 +524,25 @@ h3,
 #placeMap {
   height: 220px;
 }
+
+/* 목록 카드의 위치 지도 높이 */
+.review-map {
+  height: 220px;
+}
+
+/* 지도 정보창의 이름·주소 표시 */
+.map-info {
+  padding: 0.5rem 0.75rem;
+  max-width: 220px;
+  line-height: 1.4;
+}
+
+.map-info-name {
+  display: block;
+}
+
+.map-info-address {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+}

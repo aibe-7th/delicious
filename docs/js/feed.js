@@ -9,6 +9,8 @@ import {
   signOut,
 } from './api.js';
 import { handleAuthRedirect } from './auth-redirect.js';
+import { hasMapConfig } from './config.js';
+import { isWithinKorea, renderMap } from './place-search.js';
 import { MSG } from './msg.js';
 import { $, escapeHtml, formatDate, getFormValues, renderEmpty, showToast } from './ui.js';
 
@@ -202,6 +204,41 @@ function renderReviews() {
   }
 
   list.innerHTML = reviews.map(renderReviewCard).join('');
+  renderReviewMaps();
+}
+
+// 리뷰 카드에 위치 지도를 그린다
+function renderReviewMaps() {
+  // 지도 설정이 없으면 종료한다
+  if (!hasMapConfig()) {
+    return;
+  }
+
+  reviews.forEach((review) => {
+    const latitude = Number(review.latitude);
+    const longitude = Number(review.longitude);
+
+    // 한국 범위 밖이면 건너뛴다
+    if (!isWithinKorea(latitude, longitude)) {
+      return;
+    }
+
+    const container = $(`#map-${review.id}`);
+
+    // 컨테이너가 없으면 건너뛴다
+    if (!container) {
+      return;
+    }
+
+    // 지도 렌더링 실패는 무시한다
+    renderMap(container, {
+      latitude,
+      longitude,
+      name: review.restaurant_name,
+    }).catch(() => {
+      container.classList.add('d-none');
+    });
+  });
 }
 
 // 리뷰 카드를 렌더링한다
@@ -217,9 +254,6 @@ function renderReviewCard(review) {
         <div>
           <h3>${escapeHtml(review.title)}</h3>
           <div class="review-author">${escapeHtml(authorName)}</div>
-          <div class="metadata">
-            ${escapeHtml(review.restaurant_name)} · ${review.latitude}, ${review.longitude}
-          </div>
           <div class="metadata">${formatDate(review.created_at)}</div>
         </div>
         <div class="btn-group align-self-start ${isOwner ? '' : 'd-none'}">
@@ -239,7 +273,8 @@ function renderReviewCard(review) {
         </div>
       </div>
       <p class="review-content mt-3">${escapeHtml(review.content)}</p>
-      <div class="border-top pt-3">
+      ${renderMapSection(review)}
+      <div class="border-top pt-3 mt-3">
         <div class="comment-list vstack gap-2 mb-3">
           ${comments.map(renderComment).join('') || `<div class="metadata">${MSG.comment.empty}</div>`}
         </div>
@@ -247,6 +282,28 @@ function renderReviewCard(review) {
       </div>
     </article>
   `;
+}
+
+// 리뷰 위치 지도 또는 경고를 렌더링한다
+function renderMapSection(review) {
+  const latitude = Number(review.latitude);
+  const longitude = Number(review.longitude);
+
+  // 한국 범위를 벗어나면 경고를 표시한다
+  if (!isWithinKorea(latitude, longitude)) {
+    return `
+      <div class="alert alert-warning mt-3 mb-0" role="alert">
+        ${MSG.place.outOfKorea}
+      </div>
+    `;
+  }
+
+  // 지도 설정이 없으면 지도를 생략한다
+  if (!hasMapConfig()) {
+    return '';
+  }
+
+  return `<div class="review-map border rounded-3 mt-3" id="map-${review.id}"></div>`;
 }
 
 // 댓글 입력 영역을 렌더링한다

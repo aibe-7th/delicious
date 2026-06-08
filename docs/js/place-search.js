@@ -3,6 +3,7 @@
 //       상호 키워드(POI) 검색이 필요하면 지역검색 API 프록시나 카카오 로컬로 이 모듈만 교체한다.
 import { NAVER_MAP_CLIENT_ID, hasMapConfig } from './config.js';
 import { MSG } from './msg.js';
+import { escapeHtml } from './ui.js';
 
 // 지도 SDK 로딩 상태를 보관한다
 let sdkPromise = null;
@@ -90,6 +91,95 @@ export async function renderPreviewMap(container, place) {
   // 기존 지도의 중심과 마커를 옮긴다
   previewMap.setCenter(position);
   previewMarker.setPosition(position);
+}
+
+// 좌표 위치를 지도에 표시한다 (목록용, 매번 새 지도를 만든다)
+export async function renderMap(container, place) {
+  const naver = await loadNaverSdk();
+  const position = new naver.maps.LatLng(place.latitude, place.longitude);
+
+  // 목록 스크롤과 겹치지 않도록 조작을 제한한다
+  const map = new naver.maps.Map(container, {
+    center: position,
+    zoom: 16,
+    draggable: false,
+    scrollWheel: false,
+    pinchZoom: false,
+    disableDoubleClickZoom: true,
+  });
+
+  const marker = new naver.maps.Marker({ position, map });
+
+  // 이름과 (가능하면) 주소를 정보창으로 표시한다
+  const address = await reverseGeocode(place.latitude, place.longitude);
+  const infoWindow = new naver.maps.InfoWindow({
+    content: mapInfoContent(place.name, address),
+    backgroundColor: '#ffffff',
+    borderColor: '#198754',
+    borderWidth: 1,
+    anchorColor: '#ffffff',
+    disableAnchor: false,
+    pixelOffset: new naver.maps.Point(0, -4),
+  });
+
+  infoWindow.open(map, marker);
+  return map;
+}
+
+// 좌표를 주소로 역변환한다 (실패 시 빈 문자열)
+export async function reverseGeocode(latitude, longitude) {
+  const naver = await loadNaverSdk();
+
+  return new Promise((resolve) => {
+    // Reverse Geocoding을 못 쓰면 주소를 비운다
+    if (!naver.maps.Service?.reverseGeocode) {
+      resolve('');
+      return;
+    }
+
+    naver.maps.Service.reverseGeocode(
+      {
+        coords: new naver.maps.LatLng(latitude, longitude),
+        orders: [
+          naver.maps.Service.OrderType.ROAD_ADDR,
+          naver.maps.Service.OrderType.ADDR,
+        ].join(','),
+      },
+      (status, response) => {
+        // 실패해도 지도는 이름만으로 표시한다
+        if (status !== naver.maps.Service.Status.OK) {
+          resolve('');
+          return;
+        }
+
+        const address = response.v2?.address ?? {};
+        resolve(address.roadAddress || address.jibunAddress || '');
+      },
+    );
+  });
+}
+
+// 지도 정보창 내용을 만든다
+function mapInfoContent(name, address) {
+  const safeName = escapeHtml(name ?? '');
+  const safeAddress = escapeHtml(address ?? '');
+
+  return `
+    <div class="map-info">
+      <strong class="map-info-name">${safeName}</strong>
+      ${safeAddress ? `<div class="map-info-address">${safeAddress}</div>` : ''}
+    </div>
+  `;
+}
+
+// 한국 영역 안의 좌표인지 확인한다
+export function isWithinKorea(latitude, longitude) {
+  return (
+    latitude >= 33 &&
+    latitude <= 38.7 &&
+    longitude >= 124.5 &&
+    longitude <= 132
+  );
 }
 
 // 검색 결과를 공통 형식으로 변환한다
