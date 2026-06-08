@@ -41,11 +41,34 @@
             </div>
             <div class="col-12">
               <label class="form-label" for="placeQuery">장소 검색</label>
+              <div class="btn-group w-100 mb-2" role="group" aria-label="지도 선택">
+                <input
+                  class="btn-check"
+                  type="radio"
+                  name="mapProvider"
+                  id="mapProviderNaver"
+                  value="naver"
+                  checked
+                />
+                <label class="btn btn-outline-success" for="mapProviderNaver">
+                  네이버 지도
+                </label>
+                <input
+                  class="btn-check"
+                  type="radio"
+                  name="mapProvider"
+                  id="mapProviderKakao"
+                  value="kakao"
+                />
+                <label class="btn btn-outline-success" for="mapProviderKakao">
+                  카카오 지도
+                </label>
+              </div>
               <div class="input-group">
                 <input
                   class="form-control"
                   id="placeQuery"
-                  placeholder="도로명·지번 주소로 검색"
+                  placeholder="도로명·지번 주소나 상호명으로 검색"
                 />
                 <button
                   class="btn btn-outline-success"
@@ -53,6 +76,13 @@
                   id="placeSearchBtn"
                 >
                   검색
+                </button>
+                <button
+                  class="btn btn-outline-secondary"
+                  type="button"
+                  id="currentLocationBtn"
+                >
+                  현재 위치
                 </button>
               </div>
               <div class="list-group place-results mt-2 d-none" id="placeResults"></div>

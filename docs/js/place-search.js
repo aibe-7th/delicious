@@ -1,30 +1,43 @@
-// 장소 검색 provider (현재: 네이버 지도 Geocoding)
-// 주의: geocode는 주소(도로명/지번) 변환기라 상호·가게 이름으로는 검색되지 않는다.
-//       상호 키워드(POI) 검색이 필요하면 지역검색 API 프록시나 카카오 로컬로 이 모듈만 교체한다.
-import { NAVER_MAP_CLIENT_ID, hasMapConfig } from './config.js';
+// 장소 검색 provider (네이버 Geocoding, 카카오 키워드)
+// 네이버는 주소 검색, 카카오는 상호·주소 키워드 검색에 사용한다.
+import {
+  KAKAO_MAP_JS_KEY,
+  NAVER_MAP_CLIENT_ID,
+  hasKakaoMapConfig,
+  hasNaverMapConfig,
+} from './config.js';
 import { MSG } from './msg.js';
 import { escapeHtml } from './ui.js';
 
-// 지도 SDK 로딩 상태를 보관한다
-let sdkPromise = null;
+export const MAP_PROVIDER = {
+  NAVER: 'naver',
+  KAKAO: 'kakao',
+};
+
+// 지도 SDK 로딩 상태를 provider별로 보관한다
+let naverSdkPromise = null;
+let kakaoSdkPromise = null;
 
 // 미리보기 지도와 마커를 보관한다
-let previewMap = null;
-let previewMarker = null;
+let previewState = {
+  provider: '',
+  map: null,
+  marker: null,
+};
 
 // 네이버 지도 SDK를 지연 로딩한다
 function loadNaverSdk() {
   // 이미 로딩 중이면 재사용한다
-  if (sdkPromise) {
-    return sdkPromise;
+  if (naverSdkPromise) {
+    return naverSdkPromise;
   }
 
   // 설정이 없으면 중단한다
-  if (!hasMapConfig()) {
+  if (!hasNaverMapConfig()) {
     return Promise.reject(new Error(MSG.place.notConfigured));
   }
 
-  sdkPromise = new Promise((resolve, reject) => {
+  naverSdkPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     const params = new URLSearchParams({
       ncpKeyId: NAVER_MAP_CLIENT_ID,
@@ -38,7 +51,39 @@ function loadNaverSdk() {
     document.head.append(script);
   });
 
-  return sdkPromise;
+  return naverSdkPromise;
+}
+
+// 카카오 지도 SDK를 지연 로딩한다
+function loadKakaoSdk() {
+  // 이미 로딩 중이면 재사용한다
+  if (kakaoSdkPromise) {
+    return kakaoSdkPromise;
+  }
+
+  // 설정이 없으면 중단한다
+  if (!hasKakaoMapConfig()) {
+    return Promise.reject(new Error(MSG.place.notConfigured));
+  }
+
+  kakaoSdkPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const params = new URLSearchParams({
+      appkey: KAKAO_MAP_JS_KEY,
+      autoload: 'false',
+      libraries: 'services',
+    });
+
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?${params}`;
+    // services 라이브러리까지 준비된 뒤 반환한다
+    script.onload = () => {
+      window.kakao.maps.load(() => resolve(window.kakao));
+    };
+    script.onerror = () => reject(new Error(MSG.place.sdkFail));
+    document.head.append(script);
+  });
+
+  return kakaoSdkPromise;
 }
 
 // geocoder 서브모듈이 준비될 때까지 기다린다
@@ -58,8 +103,18 @@ function waitForGeocoder(resolve, reject, attempts = 0) {
   window.setTimeout(() => waitForGeocoder(resolve, reject, attempts + 1), 100);
 }
 
-// 주소로 장소를 검색한다 (상호명이 아닌 도로명/지번 주소 기준)
-export async function searchPlaces(query) {
+// 선택한 provider로 장소를 검색한다
+export async function searchPlaces(query, provider) {
+  // provider별 검색 함수를 호출한다
+  if (provider === MAP_PROVIDER.KAKAO) {
+    return searchKakaoPlaces(query);
+  }
+
+  return searchNaverPlaces(query);
+}
+
+// 네이버 주소 검색을 실행한다
+async function searchNaverPlaces(query) {
   const naver = await loadNaverSdk();
 
   return new Promise((resolve, reject) => {
@@ -71,30 +126,156 @@ export async function searchPlaces(query) {
       }
 
       const addresses = response.v2?.addresses ?? [];
-      resolve(addresses.map(normalizePlace));
+      resolve(addresses.map(normalizeNaverPlace));
+    });
+  });
+}
+
+// 카카오 키워드 검색을 실행한다
+async function searchKakaoPlaces(query) {
+  const kakao = await loadKakaoSdk();
+  const places = new kakao.maps.services.Places();
+
+  return new Promise((resolve, reject) => {
+    places.keywordSearch(query, (results, status) => {
+      // 결과가 없으면 빈 배열을 반환한다
+      if (status === kakao.maps.services.Status.ZERO_RESULT) {
+        searchKakaoAddress(kakao, query).then(resolve).catch(reject);
+        return;
+      }
+
+      // 검색 실패를 전달한다
+      if (status !== kakao.maps.services.Status.OK) {
+        reject(new Error(MSG.place.searchFail));
+        return;
+      }
+
+      resolve(results.map(normalizeKakaoPlace));
+    });
+  });
+}
+
+// 카카오 주소 검색을 실행한다
+async function searchKakaoAddress(kakao, query) {
+  const geocoder = new kakao.maps.services.Geocoder();
+
+  return new Promise((resolve, reject) => {
+    geocoder.addressSearch(query, (results, status) => {
+      // 결과가 없으면 빈 배열을 반환한다
+      if (status === kakao.maps.services.Status.ZERO_RESULT) {
+        resolve([]);
+        return;
+      }
+
+      // 검색 실패를 전달한다
+      if (status !== kakao.maps.services.Status.OK) {
+        reject(new Error(MSG.place.searchFail));
+        return;
+      }
+
+      resolve(results.map(normalizeKakaoAddress));
     });
   });
 }
 
 // 선택한 위치를 미니 지도로 미리 본다
-export async function renderPreviewMap(container, place) {
+export async function renderPreviewMap(container, place, provider) {
+  // 선택한 provider의 지도를 렌더링한다
+  if (provider === MAP_PROVIDER.KAKAO) {
+    return renderKakaoPreviewMap(container, place);
+  }
+
+  return renderNaverPreviewMap(container, place);
+}
+
+// 네이버 미리보기 지도를 표시한다
+async function renderNaverPreviewMap(container, place) {
   const naver = await loadNaverSdk();
   const position = new naver.maps.LatLng(place.latitude, place.longitude);
 
+  // provider가 바뀌면 컨테이너를 비운다
+  resetPreviewMap(container, MAP_PROVIDER.NAVER);
+
   // 지도를 처음 한 번만 생성한다
-  if (!previewMap) {
-    previewMap = new naver.maps.Map(container, { center: position, zoom: 16 });
-    previewMarker = new naver.maps.Marker({ position, map: previewMap });
+  if (!previewState.map) {
+    previewState.map = new naver.maps.Map(container, {
+      center: position,
+      zoom: 16,
+      draggable: false,
+      scrollWheel: false,
+      pinchZoom: false,
+      disableDoubleClickZoom: true,
+      disableDoubleTapZoom: true,
+      disableKineticPan: true,
+    });
+    previewState.marker = new naver.maps.Marker({
+      position,
+      map: previewState.map,
+    });
     return;
   }
 
   // 기존 지도의 중심과 마커를 옮긴다
-  previewMap.setCenter(position);
-  previewMarker.setPosition(position);
+  previewState.map.setCenter(position);
+  previewState.marker.setPosition(position);
+}
+
+// 카카오 미리보기 지도를 표시한다
+async function renderKakaoPreviewMap(container, place) {
+  const kakao = await loadKakaoSdk();
+  const position = new kakao.maps.LatLng(place.latitude, place.longitude);
+
+  // provider가 바뀌면 컨테이너를 비운다
+  resetPreviewMap(container, MAP_PROVIDER.KAKAO);
+
+  // 지도를 처음 한 번만 생성한다
+  if (!previewState.map) {
+    previewState.map = new kakao.maps.Map(container, {
+      center: position,
+      level: 5,
+    });
+    // 카카오는 생성 후 메서드로 조작을 막는다
+    previewState.map.setDraggable(false);
+    previewState.map.setZoomable(false);
+    previewState.marker = new kakao.maps.Marker({
+      position,
+      map: previewState.map,
+    });
+    return;
+  }
+
+  // 기존 지도의 중심과 마커를 옮긴다
+  previewState.map.setCenter(position);
+  previewState.marker.setPosition(position);
+}
+
+// provider 변경 시 미리보기 상태를 초기화한다
+function resetPreviewMap(container, provider) {
+  // 같은 provider면 유지한다
+  if (previewState.provider === provider) {
+    return;
+  }
+
+  container.innerHTML = '';
+  previewState = {
+    provider,
+    map: null,
+    marker: null,
+  };
 }
 
 // 좌표 위치를 지도에 표시한다 (목록용, 매번 새 지도를 만든다)
-export async function renderMap(container, place) {
+export async function renderMap(container, place, provider = getDefaultProvider()) {
+  // 선택한 provider의 지도를 렌더링한다
+  if (provider === MAP_PROVIDER.KAKAO) {
+    return renderKakaoMap(container, place);
+  }
+
+  return renderNaverMap(container, place);
+}
+
+// 네이버 목록 지도를 표시한다
+async function renderNaverMap(container, place) {
   const naver = await loadNaverSdk();
   const position = new naver.maps.LatLng(place.latitude, place.longitude);
 
@@ -111,7 +292,11 @@ export async function renderMap(container, place) {
   const marker = new naver.maps.Marker({ position, map });
 
   // 이름과 (가능하면) 주소를 정보창으로 표시한다
-  const address = await reverseGeocode(place.latitude, place.longitude);
+  const address = await reverseGeocode(
+    place.latitude,
+    place.longitude,
+    MAP_PROVIDER.NAVER,
+  );
   const infoWindow = new naver.maps.InfoWindow({
     content: mapInfoContent(place.name, address),
     backgroundColor: '#ffffff',
@@ -126,8 +311,49 @@ export async function renderMap(container, place) {
   return map;
 }
 
+// 카카오 목록 지도를 표시한다
+async function renderKakaoMap(container, place) {
+  const kakao = await loadKakaoSdk();
+  const position = new kakao.maps.LatLng(place.latitude, place.longitude);
+  const map = new kakao.maps.Map(container, {
+    center: position,
+    level: 5,
+  });
+  const marker = new kakao.maps.Marker({ position, map });
+
+  // 목록 스크롤과 겹치지 않도록 조작을 제한한다
+  map.setDraggable(false);
+  map.setZoomable(false);
+
+  const address = await reverseGeocode(
+    place.latitude,
+    place.longitude,
+    MAP_PROVIDER.KAKAO,
+  );
+  const infoWindow = new kakao.maps.InfoWindow({
+    content: mapInfoContent(place.name, address),
+  });
+
+  infoWindow.open(map, marker);
+  return map;
+}
+
 // 좌표를 주소로 역변환한다 (실패 시 빈 문자열)
-export async function reverseGeocode(latitude, longitude) {
+export async function reverseGeocode(
+  latitude,
+  longitude,
+  provider = getDefaultProvider(),
+) {
+  // provider별 역지오코딩을 실행한다
+  if (provider === MAP_PROVIDER.KAKAO) {
+    return reverseGeocodeWithKakao(latitude, longitude);
+  }
+
+  return reverseGeocodeWithNaver(latitude, longitude);
+}
+
+// 네이버 좌표를 주소로 역변환한다
+async function reverseGeocodeWithNaver(latitude, longitude) {
   const naver = await loadNaverSdk();
 
   return new Promise((resolve) => {
@@ -159,6 +385,25 @@ export async function reverseGeocode(latitude, longitude) {
   });
 }
 
+// 카카오 좌표를 주소로 역변환한다
+async function reverseGeocodeWithKakao(latitude, longitude) {
+  const kakao = await loadKakaoSdk();
+  const geocoder = new kakao.maps.services.Geocoder();
+
+  return new Promise((resolve) => {
+    geocoder.coord2Address(longitude, latitude, (results, status) => {
+      // 실패해도 지도는 이름만으로 표시한다
+      if (status !== kakao.maps.services.Status.OK) {
+        resolve('');
+        return;
+      }
+
+      const address = results[0]?.road_address || results[0]?.address;
+      resolve(address?.address_name ?? '');
+    });
+  });
+}
+
 // 지도 정보창 내용을 만든다
 function mapInfoContent(name, address) {
   const safeName = escapeHtml(name ?? '');
@@ -183,7 +428,7 @@ export function isWithinKorea(latitude, longitude) {
 }
 
 // 검색 결과를 공통 형식으로 변환한다
-function normalizePlace(item) {
+function normalizeNaverPlace(item) {
   const buildingName = findElement(item.addressElements, 'BUILDING_NAME');
 
   return {
@@ -193,7 +438,49 @@ function normalizePlace(item) {
     jibunAddress: item.jibunAddress,
     latitude: Number(item.y),
     longitude: Number(item.x),
+    provider: MAP_PROVIDER.NAVER,
   };
+}
+
+// 카카오 검색 결과를 공통 형식으로 변환한다
+function normalizeKakaoPlace(item) {
+  return {
+    name: item.place_name || item.road_address_name || item.address_name,
+    buildingName: item.place_name,
+    roadAddress: item.road_address_name,
+    jibunAddress: item.address_name,
+    latitude: Number(item.y),
+    longitude: Number(item.x),
+    provider: MAP_PROVIDER.KAKAO,
+  };
+}
+
+// 카카오 주소 결과를 공통 형식으로 변환한다
+function normalizeKakaoAddress(item) {
+  return {
+    name: item.road_address?.building_name || item.address_name,
+    buildingName: item.road_address?.building_name || '',
+    roadAddress: item.road_address?.address_name || '',
+    jibunAddress: item.address_name,
+    latitude: Number(item.y),
+    longitude: Number(item.x),
+    provider: MAP_PROVIDER.KAKAO,
+  };
+}
+
+// 기본 지도 provider를 정한다
+function getDefaultProvider() {
+  // 네이버 설정이 있으면 기존 표시를 유지한다
+  if (hasNaverMapConfig()) {
+    return MAP_PROVIDER.NAVER;
+  }
+
+  // 카카오만 있으면 카카오로 표시한다
+  if (hasKakaoMapConfig()) {
+    return MAP_PROVIDER.KAKAO;
+  }
+
+  return MAP_PROVIDER.NAVER;
 }
 
 // 주소 구성요소에서 특정 타입을 찾는다

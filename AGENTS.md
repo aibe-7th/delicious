@@ -69,21 +69,33 @@
 - 카카오 개인정보를 받지 않으려면 내장 provider 대신 **Custom OIDC Provider**로 등록 (issuer `https://kauth.kakao.com`, scope `openid`만, 식별자는 `custom:` 접두사 필수, 카카오 콘솔에서 OpenID Connect 활성화 필요)
 - 이메일 미제공 로그인은 `auth.users.raw_user_meta_data->>'sub'`(openid)를 해싱해 식별자/닉네임으로 사용
 
-## 지도 검색 (Naver Maps)
+## 지도 검색 (Naver/Kakao Maps)
 
 - 네이버 지역검색 API는 Client Secret 필요 + 브라우저 CORS 차단이라 정적 호스팅에서 직접 호출 불가 → 지도 JS SDK의 Geocoding(주소 → 좌표)으로 구현
 - 네이버 Client Secret은 브라우저 코드·정적 문서 예시에 넣지 않고, REST API가 필요해질 때 외부 Express 서버의 환경변수로만 보관
-- SDK는 `place-search.js`에서 지연 로딩하고 결과를 `{name, buildingName, roadAddress, jibunAddress, latitude, longitude}`로 정규화해, provider 교체 지점을 한 곳으로 모음
-- SDK 키(`ncpKeyId`)는 `config.js` 상수로 관리하고, 미설정 시 검색 UI를 비활성화 (위경도는 폼에 노출하지 않고 검색 선택으로만 채워지므로 키 없으면 저장 불가)
+- 카카오 지도는 JavaScript 키와 `services` 라이브러리로 구현하고, REST API 키·Admin 키는 브라우저에서 사용하지 않음
+- SDK는 `place-search.js`에서 지연 로딩하고 결과를 `{name, buildingName, roadAddress, jibunAddress, latitude, longitude, provider}`로 정규화해, provider 교체 지점을 한 곳으로 모음
+- SDK 키는 `config.js` 상수(`NAVER_MAP_CLIENT_ID`, `KAKAO_MAP_JS_KEY`)로 관리하고, 미설정 provider만 작성 화면 선택 UI에서 비활성화
 - NCP 콘솔에 Web 서비스 URL(로컬·GitHub Pages)을 등록해야 SDK 인증이 통과됨 (소셜 로그인 Redirect URL 등록과 동일한 주의)
+- Kakao Developers에도 JavaScript SDK 도메인과 Kakao Map API 활성화 상태를 설정해야 SDK 인증이 통과됨
+- 카카오맵 무료 사용 설정은 대표 앱 1개만 활성화 가능하므로 문서와 작업 시 이 제한을 반드시 안내
 - geocode 결과의 `addressElements`에서 `BUILDING_NAME`을 뽑아 상호명 후보로 자동 채움 (키워드 POI 검색이 아니므로 상호명은 보정 입력 전제)
 - geocode는 주소(도로명/지번) 변환기라 **상호·가게 이름으로는 검색이 안 됨** (주소 DB에 등록된 유명 건물명만 간혹 매칭) → 현재는 이 한계까지로 마무리
-- 상호 키워드(POI) 검색이 필요해지면 (1) 네이버 지역검색 API를 외부 Express 서버로 프록시하거나 (2) 카카오 로컬 키워드 검색(REST 키만으로 브라우저 CORS 허용, WGS84 좌표)으로 교체 → 둘 다 `place-search.js`의 `searchPlaces`만 바꾸면 됨 (provider 추상화)
+- 카카오는 `keywordSearch`로 상호·장소명을 먼저 검색하고 결과가 없으면 `addressSearch`로 주소 검색을 시도
+- 네이버 기반 상호 키워드(POI) 검색이 필요해지면 네이버 지역검색 API를 외부 Express 서버로 프록시하고, 현재 카카오 provider처럼 `place-search.js`의 `searchPlaces` 반환 형식만 유지
 - 동적 주입한 maps.js는 onload 시점에 geocoder 서브모듈이 아직 준비 안 될 수 있음 → `naver.maps.Service.geocode` 존재 여부를 폴링한 뒤 사용
 - 목록 카드는 상호명·좌표를 본문에 노출하지 않고 카드 지도 정보창(InfoWindow)에 상호명 + 역지오코딩 주소로 표시 (주소는 미저장이라 `reverseGeocode`로 조회, Reverse Geocoding 미사용/실패 시 이름만 표시하도록 graceful)
 - 좌표가 한국 범위(`isWithinKorea`, 위도 33~38.7·경도 124.5~132)를 벗어나면 지도를 그리지 않고 경고 컴포넌트로 대체
 - 목록 지도는 카드마다 새 인스턴스를 만들고 조작(드래그·휠줌)을 비활성화 (작성 화면 미리보기 지도는 단일 인스턴스 재사용)
+- 목록 지도는 리뷰 카드별로 네이버/카카오 provider 선택과 확대 버튼을 제공하되, 한국 범위 밖 좌표 제한은 유지
+- 목록 지도 provider·확대 상태와 작성 화면 provider 선택은 `sessionStorage`에 저장해 같은 탭을 나가기 전까지 유지
 - 작성 폼의 위경도는 직접 입력 금지 → `hidden` 필드로만 두고 검색 결과 선택으로만 채움 (readonly 입력은 HTML required 검증에서 제외되므로 제출 시 JS로 좌표 유무를 직접 검증)
+- 네이버 검색 0건이면 "'카카오 지도'로 검색할까요?" 안내의 `카카오 지도` 텍스트(링크) 클릭으로 같은 검색어를 카카오로 재검색 유도 (라디오를 코드로 바꾸면 change 미발생 → 재검색을 직접 호출)
+- provider(네이버↔카카오) 전환 시 입력 좌표(없으면 현재 위치 기본 중심 `defaultCenter`)를 유지해 지도를 다시 렌더 (`getActivePlace`)
+- 작성 화면 미리보기 지도도 조작(드래그·줌)을 비활성화 — 네이버는 생성 옵션, 카카오는 `setDraggable(false)`/`setZoomable(false)` 메서드로 처리
+- 네이버 `zoom`과 카카오 `level`은 반대 스케일이라 확대 정도를 맞춰 둠 (`zoom 16` ≈ `level 5`)
+- 작성 진입 시 현재 위치를 감지해 기본 지도를 표시(표시용, 좌표 미지정)하고, `현재 위치` 버튼은 좌표를 채워 선택으로 인정 (검색 강제의 허용 예외 경로)
+- geolocation 권한: `denied`는 스크립트로 재요청 불가 → Permissions API로 상태를 확인해 차단 안내, `prompt`/닫기 상태는 버튼 클릭 시 재요청됨; 로드 시 실패도 상태 문구로 명시
 
 ## DB 함수·트리거
 

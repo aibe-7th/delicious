@@ -9,14 +9,18 @@ import {
   signOut,
 } from './api.js';
 import { handleAuthRedirect } from './auth-redirect.js';
-import { hasMapConfig } from './config.js';
-import { isWithinKorea, renderMap } from './place-search.js';
+import { hasKakaoMapConfig, hasMapConfig, hasNaverMapConfig } from './config.js';
+import { MAP_PROVIDER, isWithinKorea, renderMap } from './place-search.js';
 import { MSG } from './msg.js';
 import { $, escapeHtml, formatDate, getFormValues, renderEmpty, showToast } from './ui.js';
 
 let currentSession = null;
 let currentIdentity = null;
 let reviews = [];
+const REVIEW_MAP_PROVIDER_KEY = 'delicious.reviewMapProviders';
+const REVIEW_MAP_EXPANDED_KEY = 'delicious.reviewMapExpanded';
+let reviewMapProviders = readSessionJson(REVIEW_MAP_PROVIDER_KEY);
+let reviewMapExpanded = readSessionJson(REVIEW_MAP_EXPANDED_KEY);
 
 // 목록 페이지를 시작한다
 async function initFeedPage() {
@@ -77,6 +81,18 @@ async function handleReviewClick(event) {
   // 댓글 삭제를 처리한다
   if (action === 'delete-comment') {
     await removeComment(commentId);
+  }
+
+  // 지도 provider 변경을 처리한다
+  if (action === 'select-map-provider') {
+    await selectReviewMapProvider(button);
+    button.blur();
+  }
+
+  // 지도 확대 상태를 전환한다
+  if (action === 'toggle-map-size') {
+    await toggleReviewMapSize(button);
+    button.blur();
   }
 }
 
@@ -204,7 +220,27 @@ function renderReviews() {
   }
 
   list.innerHTML = reviews.map(renderReviewCard).join('');
+  syncReviewMapProviders();
   renderReviewMaps();
+}
+
+// 리뷰 지도 provider 상태를 동기화한다
+function syncReviewMapProviders() {
+  reviewMapProviders = reviews.reduce((providers, review) => {
+    const current = reviewMapProviders[review.id];
+    providers[review.id] = isProviderEnabled(current)
+      ? current
+      : getDefaultMapProvider();
+
+    return providers;
+  }, {});
+  reviewMapExpanded = reviews.reduce((expanded, review) => {
+    expanded[review.id] = Boolean(reviewMapExpanded[review.id]);
+
+    return expanded;
+  }, {});
+  writeSessionJson(REVIEW_MAP_PROVIDER_KEY, reviewMapProviders);
+  writeSessionJson(REVIEW_MAP_EXPANDED_KEY, reviewMapExpanded);
 }
 
 // 리뷰 카드에 위치 지도를 그린다
@@ -230,15 +266,98 @@ function renderReviewMaps() {
       return;
     }
 
+    const provider = reviewMapProviders[review.id] || getDefaultMapProvider();
+
     // 지도 렌더링 실패는 무시한다
-    renderMap(container, {
+    renderReviewMap(container, review, provider);
+  });
+}
+
+// 리뷰 카드의 지도 하나를 렌더링한다
+function renderReviewMap(container, review, provider) {
+  const latitude = Number(review.latitude);
+  const longitude = Number(review.longitude);
+
+  container.innerHTML = '';
+  renderMap(
+    container,
+    {
       latitude,
       longitude,
       name: review.restaurant_name,
-    }).catch(() => {
-      container.classList.add('d-none');
-    });
+    },
+    provider,
+  ).catch(() => {
+    container.classList.add('d-none');
   });
+}
+
+// 리뷰 지도 provider를 선택한다
+async function selectReviewMapProvider(button) {
+  const { reviewId, provider } = button.dataset;
+
+  // 사용할 수 없는 provider면 종료한다
+  if (!isProviderEnabled(provider)) {
+    return;
+  }
+
+  reviewMapProviders[reviewId] = provider;
+  writeSessionJson(REVIEW_MAP_PROVIDER_KEY, reviewMapProviders);
+  updateMapProviderButtons(reviewId, provider);
+  await rerenderReviewMap(reviewId);
+}
+
+// 리뷰 지도 확대 상태를 전환한다
+async function toggleReviewMapSize(button) {
+  const { reviewId } = button.dataset;
+  const mapBox = $(`#map-${reviewId}`);
+
+  // 지도 영역이 없으면 종료한다
+  if (!mapBox) {
+    return;
+  }
+
+  reviewMapExpanded[reviewId] = !reviewMapExpanded[reviewId];
+  writeSessionJson(REVIEW_MAP_EXPANDED_KEY, reviewMapExpanded);
+  mapBox.classList.toggle('review-map-expanded', reviewMapExpanded[reviewId]);
+  button.textContent = reviewMapExpanded[reviewId]
+    ? MSG.action.collapseMap
+    : MSG.action.expandMap;
+  await rerenderReviewMap(reviewId);
+}
+
+// 리뷰 지도를 다시 그린다
+async function rerenderReviewMap(reviewId) {
+  const review = reviews.find(({ id }) => String(id) === String(reviewId));
+  const container = $(`#map-${reviewId}`);
+
+  // 리뷰나 지도 영역이 없으면 종료한다
+  if (!review || !container) {
+    return;
+  }
+
+  const latitude = Number(review.latitude);
+  const longitude = Number(review.longitude);
+
+  // 한국 범위 밖이면 유지한다
+  if (!isWithinKorea(latitude, longitude)) {
+    return;
+  }
+
+  const provider = reviewMapProviders[reviewId] || getDefaultMapProvider();
+  renderReviewMap(container, review, provider);
+}
+
+// 지도 provider 버튼 활성 상태를 갱신한다
+function updateMapProviderButtons(reviewId, provider) {
+  document
+    .querySelectorAll(`[data-map-provider-group="${reviewId}"] [data-provider]`)
+    .forEach((button) => {
+      button.setAttribute(
+        'aria-pressed',
+        button.dataset.provider === provider ? 'true' : 'false',
+      );
+    });
 }
 
 // 리뷰 카드를 렌더링한다
@@ -303,7 +422,97 @@ function renderMapSection(review) {
     return '';
   }
 
-  return `<div class="review-map border rounded-3 mt-3" id="map-${review.id}"></div>`;
+  return `
+    <div class="map-toolbar mt-3">
+      ${renderMapProviderControls(review.id)}
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        type="button"
+        data-action="toggle-map-size"
+        data-review-id="${review.id}"
+      >
+        ${reviewMapExpanded[review.id] ? MSG.action.collapseMap : MSG.action.expandMap}
+      </button>
+    </div>
+    <div class="review-map ${reviewMapExpanded[review.id] ? 'review-map-expanded' : ''} border rounded-3 mt-2" id="map-${review.id}"></div>
+  `;
+}
+
+// 지도 provider 버튼 묶음을 렌더링한다
+function renderMapProviderControls(reviewId) {
+  const provider = reviewMapProviders[reviewId] || getDefaultMapProvider();
+
+  return `
+    <div class="btn-group btn-group-sm" data-map-provider-group="${reviewId}">
+      ${renderMapProviderButton(reviewId, MAP_PROVIDER.NAVER, MSG.place.naverMap, provider)}
+      ${renderMapProviderButton(reviewId, MAP_PROVIDER.KAKAO, MSG.place.kakaoMap, provider)}
+    </div>
+  `;
+}
+
+// 지도 provider 버튼 하나를 렌더링한다
+function renderMapProviderButton(reviewId, provider, label, currentProvider) {
+  const enabled = isProviderEnabled(provider);
+  const active = currentProvider === provider;
+
+  return `
+    <button
+      class="btn btn-outline-success"
+      type="button"
+      data-action="select-map-provider"
+      data-review-id="${reviewId}"
+      data-provider="${provider}"
+      aria-pressed="${active ? 'true' : 'false'}"
+      ${enabled ? '' : 'disabled'}
+    >
+      ${label}
+    </button>
+  `;
+}
+
+// 기본 지도 provider를 반환한다
+function getDefaultMapProvider() {
+  // 네이버가 있으면 기존 기본값으로 사용한다
+  if (hasNaverMapConfig()) {
+    return MAP_PROVIDER.NAVER;
+  }
+
+  // 카카오만 있으면 카카오를 사용한다
+  if (hasKakaoMapConfig()) {
+    return MAP_PROVIDER.KAKAO;
+  }
+
+  return MAP_PROVIDER.NAVER;
+}
+
+// provider 사용 가능 여부를 확인한다
+function isProviderEnabled(provider) {
+  // 네이버 설정 여부를 확인한다
+  if (provider === MAP_PROVIDER.NAVER) {
+    return hasNaverMapConfig();
+  }
+
+  // 카카오 설정 여부를 확인한다
+  if (provider === MAP_PROVIDER.KAKAO) {
+    return hasKakaoMapConfig();
+  }
+
+  return false;
+}
+
+// 세션 저장 JSON을 읽는다
+function readSessionJson(key) {
+  // 저장값이 없으면 빈 객체를 반환한다
+  try {
+    return JSON.parse(sessionStorage.getItem(key) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+// 세션 저장 JSON을 쓴다
+function writeSessionJson(key, value) {
+  sessionStorage.setItem(key, JSON.stringify(value));
 }
 
 // 댓글 입력 영역을 렌더링한다

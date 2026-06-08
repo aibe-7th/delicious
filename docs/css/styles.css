@@ -530,6 +530,25 @@ h3,
   height: 220px;
 }
 
+/* 목록 지도 컨트롤은 줄바꿈을 허용한다 */
+.map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+/* 지도 선택 버튼은 색 채움 없이 상태만 표시한다 */
+.map-toolbar [aria-pressed='true'] {
+  box-shadow: inset 0 0 0 1px currentColor;
+  font-weight: 700;
+}
+
+/* 확대된 목록 지도 높이 */
+.review-map-expanded {
+  height: min(70vh, 520px);
+}
+
 /* 지도 정보창의 이름·주소 표시 */
 .map-info {
   padding: 0.5rem 0.75rem;

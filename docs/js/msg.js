@@ -1,7 +1,9 @@
 export const MSG = {
   action: {
+    collapseMap: '지도 축소',
     delete: '삭제',
     edit: '수정',
+    expandMap: '지도 확대',
     register: '등록',
   },
   auth: {
@@ -37,9 +39,20 @@ export const MSG = {
     sdkFail: '지도 검색을 불러오지 못했습니다.',
     searchFail: '검색에 실패했습니다. 다시 시도해 주세요.',
     empty: '검색 결과가 없습니다. 다른 키워드로 검색해 보세요.',
+    emptyNaver: '네이버 지도에서 결과를 찾지 못했습니다.',
+    kakaoLink: '카카오 지도',
+    searchKakao: "'{link}'로 검색할까요?",
     queryRequired: '검색어를 입력해 주세요.',
     selected: '선택한 위치의 좌표를 입력했습니다.',
     locationRequired: '장소를 검색해 위치를 선택해 주세요.',
+    currentLocationSet: '현재 위치를 좌표로 입력했습니다.',
+    geolocationFail: '현재 위치를 가져오지 못했습니다. 위치 권한을 확인해 주세요.',
+    geolocationDenied:
+      '위치 권한이 없어 기본 지도를 표시하지 못했습니다. 검색하거나 \'현재 위치\'로 지정해 주세요.',
+    geolocationBlocked:
+      '위치 권한이 차단되어 있습니다. 주소창의 위치 아이콘에서 허용으로 바꾼 뒤 다시 시도해 주세요.',
+    kakaoMap: '카카오 지도',
+    naverMap: '네이버 지도',
     outOfKorea: '한국 범위를 벗어난 좌표라 지도를 표시할 수 없습니다.',
   },
   profile: {
