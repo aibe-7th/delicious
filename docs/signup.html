@@ -34,6 +34,11 @@
           <button class="btn btn-success btn-lg" type="submit">가입하기</button>
         </form>
         <div class="auth-divider">또는</div>
+        <!--
+          data-provider: signInWithOAuth에 전달하는 provider 식별자.
+          google는 Supabase 내장 provider, custom:kakao는 Custom OIDC provider 식별자.
+          (custom:kakao는 Supabase 대시보드 Custom Providers에 등록한 값과 일치해야 함)
+        -->
         <div class="social-actions">
           <button class="social-button google" data-provider="google" type="button">
             <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -56,7 +61,7 @@
             </svg>
             Google로 계속하기
           </button>
-          <button class="social-button kakao" data-provider="kakao" type="button">
+          <button class="social-button kakao" data-provider="custom:kakao" type="button">
             <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#191600"
