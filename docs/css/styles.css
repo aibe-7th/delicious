@@ -1,4 +1,5 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
 
 @font-face {
   font-family: 'Paperlogy';
@@ -62,11 +63,11 @@ canvas {
 
 .navbar-brand {
   color: var(--accent-dark);
-  font-family: 'Paperlogy', 'Pretendard', sans-serif;
+  font-family: 'Pacifico', cursive;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 400;
   letter-spacing: 0;
-  line-height: 1;
+  line-height: 1.4;
   text-decoration: none;
 }
 
