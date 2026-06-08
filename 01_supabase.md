@@ -43,5 +43,5 @@
 ![API 정보 복사 메뉴](./img/01/01-06.png)
 
 - 상단의 프로젝트 이름이 `delicious`인지 확인한다.
-- `Copy` 메뉴에서 `Project URL`을 복사해 프론트엔드 설정에 사용한다.
-- `Copy` 메뉴에서 `Publishable key`를 복사해 프론트엔드 설정에 사용한다.
+- `Copy` 메뉴에서 `Project URL`을 복사해 프런트엔드 설정에 사용한다.
+- `Copy` 메뉴에서 `Publishable key`를 복사해 프런트엔드 설정에 사용한다.

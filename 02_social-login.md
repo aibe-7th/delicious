@@ -198,7 +198,7 @@
 - Supabase의 Custom Provider 입력 화면으로 돌아와 `Create and enable provider`를 클릭한다.
 - `Custom Providers` 목록에 `custom:kakao`가 `Enabled` 상태로 추가된 것을 확인한다.
 
-## 10. 프론트엔드에서 사용
+## 10. 프런트엔드에서 사용
 
 - 소셜 로그인 버튼의 `data-provider`를 `custom:kakao`로 지정한다.
   - Supabase 대시보드에 등록한 식별자와 정확히 일치해야 한다.
@@ -206,7 +206,7 @@
 # 리다이렉트 URL 설정 (배포 공통)
 
 - Google·Kakao 모두에 적용되는 공통 설정이다.
-- 프론트엔드는 현재 접속한 주소를 기준으로 로그인 후 돌아올 `redirectTo`를 자동으로 만들어 Supabase에 전달한다 (`docs/js/social-auth.js`). 따라서 코드는 수정할 필요가 없다.
+- 프런트엔드는 현재 접속한 주소를 기준으로 로그인 후 돌아올 `redirectTo`를 자동으로 만들어 Supabase에 전달한다 (`docs/js/social-auth.js`). 따라서 코드는 수정할 필요가 없다.
 - 단, Supabase는 전달받은 `redirectTo`가 **허용 목록에 있을 때만** 사용한다. 목록에 없으면 이를 무시하고 기본 `Site URL`(기본값 `http://localhost:3000`)로 폴백한다.
   - 배포 후에도 자꾸 `localhost:3000`으로 리다이렉트된다면 이 설정이 누락된 경우다.
 
