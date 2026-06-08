@@ -28,6 +28,16 @@
 - 이미지와 미디어는 화면을 넘치지 않도록 max-width와 grid minmax(0, ...)를 고려
 - 레이아웃, 디자인 구현 시 boostrap5 최신 버전을 사용하고, 직접적인 CSS 사용은 폰트 적용 외엔 최소화
 
+## SEO 및 메타 태그 (OG / 파비콘)
+
+- Open Graph 및 Twitter (X) 카드 메타 태그의 이미지(`og:image`, `twitter:image`)와 파비콘 경로는 로컬 및 배포 환경에서 유연하게 매핑될 수 있도록 상대 경로(예: `./preview.jpg`, `./favicon.ico`)로 작성
+- Twitter (X) 카드 메타 태그는 표준 규격을 따라 `property` 대신 `name` 속성을 사용 (예: `<meta name="twitter:card" content="summary_large_image">`)
+- 파비콘과 앱 아이콘은 데스크톱 및 모바일 기기 대응을 위해 멀티 포맷으로 세팅:
+  - `favicon.ico` (멀티사이즈 16/32/48/64)
+  - `favicon.png` (32x32 크기)
+  - `apple-touch-icon.png` (180x180 모바일 기기용 크기)
+- Open Graph 미리보기 이미지는 가로세로 2:1 비율(예: 800x400)의 JPEG(`preview.jpg`) 형식으로 크롭 및 리사이즈하여 제공
+
 ## 타이포그래피
 
 - 제목 계열은 Paperlogy, 본문 계열은 Pretendard를 사용
