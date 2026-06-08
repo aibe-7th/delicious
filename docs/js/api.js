@@ -10,11 +10,6 @@ export async function getSession() {
     throw error;
   }
 
-  // 로그인 유저 프로필을 보장한다
-  if (data.session?.user) {
-    await upsertProfile(supabase, data.session.user);
-  }
-
   return data.session;
 }
 
@@ -34,27 +29,36 @@ export async function signUp(email, password, emailRedirectTo) {
     throw error;
   }
 
-  const user = data.user;
-
-  // 유저가 있으면 프로필을 저장한다
-  if (user) {
-    await upsertProfile(supabase, user);
-  }
-
   return data;
 }
 
-// 유저 프로필을 저장한다
-async function upsertProfile(supabase, user) {
-  const { error } = await supabase.from('profiles').upsert({
-    id: user.id,
-    email: user.email ?? user.id,
-  });
-
-  // 프로필 저장 오류를 전달한다
-  if (error) {
-    throw error;
+// 로그인 수단을 한글 라벨로 바꾼다
+export function resolveProviderLabel(provider) {
+  if (!provider || provider === 'email') {
+    return '이메일';
   }
+  if (provider.includes('kakao')) {
+    return '카카오';
+  }
+  if (provider.includes('google')) {
+    return '구글';
+  }
+  return provider;
+}
+
+// 우측 상단 표시용 로그인 정보를 만든다 (가입 시 트리거가 저장한 식별자를 읽는다)
+export async function resolveUserIdentity(user) {
+  const supabase = requireSupabase();
+  const { data } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', user.id)
+    .single();
+
+  return {
+    label: data?.email ?? user.email ?? user.id,
+    provider: resolveProviderLabel(user.app_metadata?.provider),
+  };
 }
 
 // 이메일 로그인을 진행한다
@@ -100,6 +104,20 @@ export async function signOut() {
   if (error) {
     throw error;
   }
+}
+
+// 회원 탈퇴를 진행한다
+export async function deleteAccount() {
+  const supabase = requireSupabase();
+  const { error } = await supabase.rpc('delete_current_user');
+
+  // 탈퇴 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+
+  // 남은 로컬 세션을 정리한다
+  await supabase.auth.signOut();
 }
 
 // 리뷰 목록을 조회한다
@@ -224,4 +242,69 @@ export async function deleteComment(id) {
   if (error) {
     throw error;
   }
+}
+
+// 닉네임을 수정한다
+export async function updateNickname(userId, nickname) {
+  const supabase = requireSupabase();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ nickname })
+    .eq('id', userId);
+
+  // 수정 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+}
+
+// 내 프로필 정보를 조회한다
+export async function fetchMyProfile(userId) {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('email, nickname, created_at')
+    .eq('id', userId)
+    .single();
+
+  // 조회 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+// 내가 작성한 리뷰를 조회한다
+export async function fetchMyReviews(userId) {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id, title, restaurant_name, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  // 조회 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+// 내가 작성한 댓글을 조회한다
+export async function fetchMyComments(userId) {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('comments')
+    .select('id, content, created_at, review_id, reviews ( title )')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  // 조회 오류를 전달한다
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }

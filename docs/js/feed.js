@@ -4,6 +4,7 @@ import {
   deleteReview,
   fetchReviews,
   getSession,
+  resolveUserIdentity,
   saveComment,
   signOut,
 } from './api.js';
@@ -12,6 +13,7 @@ import { MSG } from './msg.js';
 import { $, escapeHtml, formatDate, getFormValues, renderEmpty, showToast } from './ui.js';
 
 let currentSession = null;
+let currentIdentity = null;
 let reviews = [];
 
 // 목록 페이지를 시작한다
@@ -112,6 +114,7 @@ async function refreshSession() {
   // 연결 전이면 안내한다
   if (!getSupabase()) {
     currentSession = null;
+    currentIdentity = null;
     renderSession();
     return;
   }
@@ -119,6 +122,9 @@ async function refreshSession() {
   // 세션을 조회한다
   try {
     currentSession = await getSession();
+    currentIdentity = currentSession
+      ? await resolveUserIdentity(currentSession.user)
+      : null;
   } catch (error) {
     showToast(error, 'danger');
   }
@@ -130,19 +136,20 @@ async function refreshSession() {
 function renderSession() {
   const sessionText = $('#sessionText');
   const authLinks = document.querySelectorAll('[data-auth-link]');
-  const logoutButtons = document.querySelectorAll('[data-logout-button]');
+  const sessionLinks = document.querySelectorAll('[data-session-link]');
   const writeLinks = document.querySelectorAll('[data-write-link]');
 
   // 로그인 상태를 표시한다
   if (currentSession) {
-    sessionText.textContent = currentSession.user.email;
+    sessionText.textContent = currentIdentity
+      ? `${currentIdentity.label} · ${currentIdentity.provider}`
+      : '';
     sessionText.classList.remove('d-none');
     authLinks.forEach((link) => {
       link.classList.add('d-none');
     });
-    logoutButtons.forEach((button) => {
-      button.classList.remove('d-none');
-      button.disabled = false;
+    sessionLinks.forEach((element) => {
+      element.classList.remove('d-none');
     });
     writeLinks.forEach((link) => {
       link.href = './write.html';
@@ -155,9 +162,8 @@ function renderSession() {
   authLinks.forEach((link) => {
     link.classList.remove('d-none');
   });
-  logoutButtons.forEach((button) => {
-    button.classList.add('d-none');
-    button.disabled = true;
+  sessionLinks.forEach((element) => {
+    element.classList.add('d-none');
   });
   writeLinks.forEach((link) => {
     link.href = './login.html';

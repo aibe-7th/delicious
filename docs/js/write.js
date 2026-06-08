@@ -1,9 +1,10 @@
 import { initSupabase, getSupabase } from './supabase-client.js';
-import { fetchReview, getSession, saveReview } from './api.js';
+import { fetchReview, getSession, resolveUserIdentity, saveReview } from './api.js';
 import { MSG } from './msg.js';
 import { $, getFormValues, showToast } from './ui.js';
 
 let currentSession = null;
+let currentIdentity = null;
 let editingReviewId = null;
 
 // 작성 페이지를 시작한다
@@ -32,6 +33,9 @@ async function refreshSession() {
   // 세션을 조회한다
   try {
     currentSession = await getSession();
+    currentIdentity = currentSession
+      ? await resolveUserIdentity(currentSession.user)
+      : null;
     renderSession();
   } catch (error) {
     showToast(error, 'danger');
@@ -44,7 +48,9 @@ function renderSession() {
 
   // 로그인 상태만 표시한다
   if (currentSession) {
-    sessionText.textContent = currentSession.user.email;
+    sessionText.textContent = currentIdentity
+      ? `${currentIdentity.label} · ${currentIdentity.provider}`
+      : '';
     sessionText.classList.remove('d-none');
     return;
   }

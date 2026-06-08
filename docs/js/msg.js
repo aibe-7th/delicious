@@ -5,6 +5,7 @@ export const MSG = {
     register: '등록',
   },
   auth: {
+    deleteAccountSuccess: '탈퇴가 완료되었습니다.',
     emailVerified: '이메일 인증이 완료되었습니다. 로그인해 주세요.',
     loginAction: '로그인하기',
     loginRequiredCommentCta: '로그인 후 댓글을 남길 수 있습니다.',
@@ -20,13 +21,20 @@ export const MSG = {
     placeholder: '댓글 쓰기',
   },
   confirm: {
+    deleteAccount: '정말 탈퇴할까요? 작성한 리뷰와 댓글이 모두 삭제됩니다.',
     deleteReview: '리뷰를 삭제할까요?',
   },
   empty: {
+    myComments: '작성한 댓글이 없습니다.',
+    myReviews: '작성한 글이 없습니다.',
     reviews: '아직 등록된 맛집 리뷰가 없습니다.',
   },
   form: {
     editReviewTitle: '리뷰 수정',
+  },
+  profile: {
+    nicknameRequired: '닉네임을 입력해 주세요.',
+    nicknameUpdated: '닉네임을 변경했습니다.',
   },
   review: {
     loadFail: '리뷰를 불러오지 못했습니다.',

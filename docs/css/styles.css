@@ -396,6 +396,42 @@ h3,
   margin-top: 1.5rem;
 }
 
+.mypage-section {
+  margin-bottom: 2.5rem;
+}
+
+.mypage-heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.mypage-info dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.mypage-info dd {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+  word-break: break-all;
+}
+
+.mypage-nickname {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 22rem;
+}
+
+.mypage-nickname .form-control {
+  font-size: 0.95rem;
+}
+
+.mypage-nickname .btn {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .nav-inner {
     align-items: flex-start;
