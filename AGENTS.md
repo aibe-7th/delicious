@@ -15,7 +15,8 @@
 ## 설정 가이드 문서
 
 - 외부 서비스 연동 절차는 루트에 `0N_주제.md` 형식으로 작성
-- 화면 캡처는 `./img/0N-XX.png`로 번호 순서에 맞춰 추가하고 본문에서 참조
+- 화면 캡처는 `./img/0N/0N-XX.png`로 주제별 하위 폴더에 번호 순서대로 추가하고 본문에서 참조
+- 기존 캡처 경로를 변경하면 관련 `0N_주제.md`의 이미지 참조도 함께 수정
 - 각 단계는 `## N. 제목` 섹션으로 나누고, 캡처 이미지와 함께 클릭할 메뉴/버튼을 구체적으로 안내
 
 ## 화면 구현
@@ -56,6 +57,7 @@
 - 댓글에는 작성자 정보를 표시할 수 있도록 profiles 관계 조회를 고려
 - Supabase 오류는 사용자에게 한글 메시지로 표시
 - 소셜 로그인(OAuth) 콜백은 쿼리 파라미터(code)로, 이메일 인증 콜백은 해시(access_token)로 전달되므로 두 형태를 모두 확인
+- OAuth `redirectTo`는 현재 접속 주소 기준으로 동적 생성하고, Supabase 대시보드 `Authentication > URL Configuration`의 Site URL과 Redirect URLs(와일드카드 `/**`)에 배포·로컬 주소를 등록 → 미등록 시 전달한 `redirectTo`가 무시되고 기본 Site URL(`localhost:3000`)로 폴백됨
 - 프로필 생성은 클라이언트 upsert가 아니라 `auth.users` insert 트리거(`handle_new_user`)로 가입 시점에 서버에서 처리 (매 세션 재계산·클라이언트 식별자 생성 방지)
 - 식별자 해싱 등 단방향 가공은 프론트(`crypto.subtle`)가 아니라 가입 트리거에서 pgcrypto로 처리
 
