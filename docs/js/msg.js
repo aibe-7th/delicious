@@ -32,6 +32,14 @@ export const MSG = {
   form: {
     editReviewTitle: '리뷰 수정',
   },
+  place: {
+    notConfigured: '지도 검색이 설정되지 않았습니다. 좌표를 직접 입력해 주세요.',
+    sdkFail: '지도 검색을 불러오지 못했습니다.',
+    searchFail: '검색에 실패했습니다. 다시 시도해 주세요.',
+    empty: '검색 결과가 없습니다. 다른 키워드로 검색해 보세요.',
+    queryRequired: '검색어를 입력해 주세요.',
+    selected: '선택한 위치의 좌표를 입력했습니다.',
+  },
   profile: {
     nicknameRequired: '닉네임을 입력해 주세요.',
     nicknameUpdated: '닉네임을 변경했습니다.',

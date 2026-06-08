@@ -513,3 +513,14 @@ h3,
     padding: 1.25rem;
   }
 }
+
+/* 장소 검색 결과 목록은 길어지면 스크롤한다 */
+.place-results {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+/* 선택 위치 미리보기 지도 높이 */
+#placeMap {
+  height: 220px;
+}

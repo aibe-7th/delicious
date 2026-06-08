@@ -38,6 +38,26 @@
               />
             </div>
             <div class="col-12">
+              <label class="form-label" for="placeQuery">장소 검색</label>
+              <div class="input-group">
+                <input
+                  class="form-control"
+                  id="placeQuery"
+                  placeholder="도로명·지번 주소나 건물명으로 검색"
+                />
+                <button
+                  class="btn btn-outline-success"
+                  type="button"
+                  id="placeSearchBtn"
+                >
+                  검색
+                </button>
+              </div>
+              <div class="list-group place-results mt-2 d-none" id="placeResults"></div>
+              <div class="border rounded-3 mt-2 d-none" id="placeMap"></div>
+              <p class="form-text mb-0" id="placeHint"></p>
+            </div>
+            <div class="col-12">
               <label class="form-label" for="restaurantName">상호명</label>
               <input
                 class="form-control"

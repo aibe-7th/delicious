@@ -67,6 +67,17 @@
 - 카카오 개인정보를 받지 않으려면 내장 provider 대신 **Custom OIDC Provider**로 등록 (issuer `https://kauth.kakao.com`, scope `openid`만, 식별자는 `custom:` 접두사 필수, 카카오 콘솔에서 OpenID Connect 활성화 필요)
 - 이메일 미제공 로그인은 `auth.users.raw_user_meta_data->>'sub'`(openid)를 해싱해 식별자/닉네임으로 사용
 
+## 지도 검색 (Naver Maps)
+
+- 네이버 지역검색 API는 Client Secret 필요 + 브라우저 CORS 차단이라 정적 호스팅에서 직접 호출 불가 → 지도 JS SDK의 Geocoding(주소·건물명 → 좌표)으로 구현
+- SDK는 `place-search.js`에서 지연 로딩하고 결과를 `{name, buildingName, roadAddress, jibunAddress, latitude, longitude}`로 정규화해, provider 교체 지점을 한 곳으로 모음
+- SDK 키(`ncpKeyId`)는 `config.js` 상수로 관리하고, 미설정 시 검색 UI를 비활성화한 채 좌표 직접 입력으로 폴백
+- NCP 콘솔에 Web 서비스 URL(로컬·GitHub Pages)을 등록해야 SDK 인증이 통과됨 (소셜 로그인 Redirect URL 등록과 동일한 주의)
+- geocode 결과의 `addressElements`에서 `BUILDING_NAME`을 뽑아 상호명 후보로 자동 채움 (키워드 POI 검색이 아니므로 상호명은 보정 입력 전제)
+- geocode는 주소(도로명/지번) 변환기라 **상호·가게 이름으로는 검색이 안 됨** (주소 DB에 등록된 유명 건물명만 간혹 매칭) → 현재는 이 한계까지로 마무리
+- 상호 키워드(POI) 검색이 필요해지면 (1) 네이버 지역검색 API를 Supabase Edge Function으로 프록시하거나 (2) 카카오 로컬 키워드 검색(REST 키만으로 브라우저 CORS 허용, WGS84 좌표)으로 교체 → 둘 다 `place-search.js`의 `searchPlaces`만 바꾸면 됨 (provider 추상화)
+- 동적 주입한 maps.js는 onload 시점에 geocoder 서브모듈이 아직 준비 안 될 수 있음 → `naver.maps.Service.geocode` 존재 여부를 폴링한 뒤 사용
+
 ## DB 함수·트리거
 
 - `auth.users` 삭제(탈퇴 등)는 service_role 권한이라 프론트에서 직접 못 함 → `security definer` RPC(`auth.uid()`로 본인만)로 처리
