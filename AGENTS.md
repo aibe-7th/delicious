@@ -7,6 +7,17 @@
 - 꼭 spa가 아니어도 괜찮으므로 너무 html, js 파일이 길어지지 않도록 주의
 - 이미 push된 태그는 이동하지 않고, 변경 반영 시 minor 또는 patch 버전을 올려 새 태그로 push
 
+## 커밋 규칙
+
+- 커밋 메시지는 `타입 : 한글 설명` 형식을 사용 (예: feat, fix, docs, db)
+- 기능 구현과 해당 기능의 설정 가이드 문서는 서로 다른 커밋으로 분리
+
+## 설정 가이드 문서
+
+- 외부 서비스 연동 절차는 루트에 `0N_주제.md` 형식으로 작성
+- 화면 캡처는 `./img/0N-XX.png`로 번호 순서에 맞춰 추가하고 본문에서 참조
+- 각 단계는 `## N. 제목` 섹션으로 나누고, 캡처 이미지와 함께 클릭할 메뉴/버튼을 구체적으로 안내
+
 ## 화면 구현
 
 - 사용자 화면은 일반적인 서비스 사이트처럼 구성하고, 개발용 설정/상태 문구를 노출하지 않음
@@ -44,3 +55,18 @@
 - 작성자 전용 수정/삭제 컨트롤은 프론트 표시 조건과 RLS 정책을 함께 고려
 - 댓글에는 작성자 정보를 표시할 수 있도록 profiles 관계 조회를 고려
 - Supabase 오류는 사용자에게 한글 메시지로 표시
+- 소셜 로그인(OAuth) 콜백은 쿼리 파라미터(code)로, 이메일 인증 콜백은 해시(access_token)로 전달되므로 두 형태를 모두 확인
+- 프로필 생성은 클라이언트 upsert가 아니라 `auth.users` insert 트리거(`handle_new_user`)로 가입 시점에 서버에서 처리 (매 세션 재계산·클라이언트 식별자 생성 방지)
+- 식별자 해싱 등 단방향 가공은 프론트(`crypto.subtle`)가 아니라 가입 트리거에서 pgcrypto로 처리
+
+## 소셜 로그인 (Kakao)
+
+- Supabase 내장 Kakao provider는 `account_email`, `profile_image`, `profile_nickname` scope를 서버에 하드코딩하고, 클라이언트 `scopes` 옵션은 덮어쓰기가 아니라 append만 됨 → 이 scope들을 클라이언트에서 제거할 수 없음
+- 카카오 개인정보를 받지 않으려면 내장 provider 대신 **Custom OIDC Provider**로 등록 (issuer `https://kauth.kakao.com`, scope `openid`만, 식별자는 `custom:` 접두사 필수, 카카오 콘솔에서 OpenID Connect 활성화 필요)
+- 이메일 미제공 로그인은 `auth.users.raw_user_meta_data->>'sub'`(openid)를 해싱해 식별자/닉네임으로 사용
+
+## DB 함수·트리거
+
+- `auth.users` 삭제(탈퇴 등)는 service_role 권한이라 프론트에서 직접 못 함 → `security definer` RPC(`auth.uid()`로 본인만)로 처리
+- `security definer` 함수에서 pgcrypto(`digest` 등) 확장 함수를 쓰면 `set search_path = public, extensions`를 명시해야 함 (없으면 가입 시 "Database error saving new user")
+- 트리거/RPC 변경은 `supabase/schemas`의 SQL 파일에 반영하고, 사용자가 SQL Editor에서 다시 실행해야 적용됨 (트리거는 기존 유저에 소급되지 않음)
